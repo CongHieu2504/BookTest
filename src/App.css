@@ -1,0 +1,12 @@
+/* App.css - Custom styles for App component */
+
+.app {
+  min-height: 100vh;
+}
+
+.main-content {
+  padding: 0;
+  text-align: center;
+  background-color: #fafafa;
+  min-height: calc(100vh - 200px);
+}

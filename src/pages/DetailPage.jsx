@@ -62,6 +62,10 @@ const DetailPage = () => {
     const res = await getProductByIdAPI(id);
     if (res && res.data) {
       setProduct(res.data.product);
+      setProduct({
+        ...res.data.product,
+        availableQuantity: res.data.availableQuantity
+      })
       setProductToCheckout([
         {
           ...res.data.product,
@@ -83,9 +87,11 @@ const DetailPage = () => {
     }
   };
 
-  console.log("reviews", listReviews);
-
   const handleAddToCart = async (productId, quantity) => {
+    if(!user.id){
+      showNotification("error", "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.");
+      return;
+    }
     if (product) {
       const res = await addProductToCartAPI(productId, quantity);
       if (res && res.data) {
@@ -98,6 +104,10 @@ const DetailPage = () => {
   };
 
   const handleBuyNow = () => {
+    if(!user.id){
+      showNotification("error", "Vui lòng đăng nhập để mua sản phẩm.");
+      return;
+    }
     if (!product) return;
     navigate("/checkout", { state: { cartItems: productToCheckout } });
   };
@@ -292,7 +302,7 @@ const DetailPage = () => {
             <div className="product-header">
               <h1 className="product-title">{product.productName}</h1>
               <Tag color="blue" className="product-tag">
-                Chính hãng
+                Tồn kho : {product.availableQuantity}
               </Tag>
             </div>
 

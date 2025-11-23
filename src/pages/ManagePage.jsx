@@ -33,6 +33,11 @@ import {
   ArrowLeftOutlined,
   DatabaseOutlined,
   MenuOutlined,
+  MessageOutlined,
+  FileAddOutlined,
+  ProfileOutlined,
+  FileSearchOutlined,
+  FileDoneOutlined,
 } from "@ant-design/icons";
 
 import CommonDashboard from "../components/admin/CommonDashboard";
@@ -43,7 +48,6 @@ import CommonInventoryManagement from "../components/admin/CommonInventoryManage
 import CreateImportExportForm from "../components/admin/CreateImportExportForm";
 import ImportExportList from "../components/admin/ImportExportList";
 import CreateInventoryCountForm from "../components/admin/CreateInventoryCountForm";
-import InventoryCountManagement from "../components/admin/InventoryCountManagement";
 
 import "../styles/AdminPage.css";
 
@@ -54,6 +58,9 @@ import CommonCategoryManagement from "../components/admin/CommonCategoryManageme
 import PromotionManagement from "../components/admin/PromotionManagement";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import ProductInventoryPage from "../components/admin/ProductInventoryPage";
+import CommonCustomerCare from "../components/admin/CommonCustomerCare";
+import InventoryCountList from "../components/admin/InventoryCountList";
+import ReturnOrderList from "../components/admin/ReturnOrderList";
 
 const { Sider, Content } = Layout;
 
@@ -111,7 +118,7 @@ const ManagePage = () => {
 
   const handleCreateCountSlipSuccess = (countSlip) => {
     setNewCountSlip(countSlip);
-    navigate("/manager/inventory-count-management");
+    navigate("/manager/inventory-count-list");
   };
 
   const handleCreateNewCount = () => {
@@ -125,9 +132,21 @@ const ManagePage = () => {
       label: "Dashboard",
     },
     {
-      key: "orders",
+      key: "orderManagement",
       icon: <FileTextOutlined />,
       label: "Quản lý hóa đơn",
+      children: [
+        {
+          key: "orders",
+          icon: <DatabaseOutlined style={{ color: "#52c41a" }} />,
+          label: "Danh sách hóa đơn",
+        },
+        {
+          key: "return-requests",
+          icon: <FileAddOutlined style={{ color: "#ff4d4f" }} />,
+          label: "Phiếu yêu cầu hoàn trả",
+        },
+      ],
     },
     {
       key: "products",
@@ -155,6 +174,11 @@ const ManagePage = () => {
       label: "Quản lý thông báo",
     },
     {
+      key: "customer-care",
+      icon: <MessageOutlined />,
+      label: "Chăm sóc khách hàng",
+    },
+    {
       key: "promotions",
       icon: <GiftOutlined />,
       label: "Quản lý khuyến mãi",
@@ -171,23 +195,23 @@ const ManagePage = () => {
         },
         {
           key: "create-import-export",
-          icon: <PlusOutlined style={{ color: "#ff4d4f" }} />,
+          icon: <FileAddOutlined style={{ color: "#ff4d4f" }} />,
           label: "Tạo phiếu nhập xuất hàng",
         },
         {
           key: "import-export-list",
-          icon: <UnorderedListOutlined />,
+          icon: <ProfileOutlined />,
           label: "Danh sách phiếu nhập xuất",
         },
         {
           key: "create-inventory-count",
-          icon: <FileTextIcon />,
+          icon: <FileSearchOutlined />,
           label: "Tạo phiếu kiểm kê",
         },
         {
-          key: "inventory-count-management",
-          icon: <FileTextIcon />,
-          label: "Quản lý kiểm kê",
+          key: "inventory-count-list",
+          icon: <FileDoneOutlined />,
+          label: "Danh sách phiêu kiểm kê",
         },
       ],
     },
@@ -210,6 +234,8 @@ const ManagePage = () => {
         return <CommonDashboard />;
       case "orders":
         return <CommonOrderManagement />;
+      case "return-requests":
+        return <ReturnOrderList />;
       case "products":
         return <CommonProductManagement />;
       case "categories":
@@ -218,6 +244,8 @@ const ManagePage = () => {
         return <CommonCustomerManagement />;
       case "notifications":
         return <CommonNotificationManagement />;
+      case "customer-care":
+        return <CommonCustomerCare />;
       case "employees":
         return <EmployeeManagement />;
       case "promotions":
@@ -229,11 +257,20 @@ const ManagePage = () => {
       case "create-import-export":
         return <CreateImportExportForm onSuccess={handleCreateSlipSuccess} />;
       case "import-export-list":
-        return <ImportExportList newSlip={newSlip} onCreateNew={handleCreateNew} />;
+        return (
+          <ImportExportList newSlip={newSlip} onCreateNew={handleCreateNew} />
+        );
       case "create-inventory-count":
-        return <CreateInventoryCountForm onSuccess={handleCreateCountSlipSuccess} />;
-      case "inventory-count-management":
-        return <InventoryCountManagement newCountSlip={newCountSlip} onCreateNew={handleCreateNewCount} />;
+        return (
+          <CreateInventoryCountForm onSuccess={handleCreateCountSlipSuccess} />
+        );
+      case "inventory-count-list":
+        return (
+          <InventoryCountList
+            newCountSlip={newCountSlip}
+            onCreateNew={handleCreateNewCount}
+          />
+        );
       // case 'settings':
       //     return (
       //         <CommonSettings

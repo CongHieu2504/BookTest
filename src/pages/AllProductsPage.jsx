@@ -35,7 +35,7 @@ const AllProductsPage = () => {
   const [listSubCategories, setListSubCategories] = useState([]);
   const [parentCategory, setParentCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
-  const { fetchCartInfor } = useContext(AuthContext);
+  const { user, fetchCartInfor } = useContext(AuthContext);
 
   const [notification, setNotification] = useState({
     type: "",
@@ -126,6 +126,36 @@ const AllProductsPage = () => {
     }
   });
 
+  // Filter products by price range
+  const getFilteredProducts = () => {
+    let filtered = [...listProducts];
+
+    // Filter by price range
+    if (selectedPriceRange) {
+      filtered = filtered.filter((book) => {
+        const priceAfterDiscount =
+          book.discountPercentage > 0 ? book.priceAfterDiscount : book.price;
+
+        switch (selectedPriceRange) {
+          case "under-100k":
+            return priceAfterDiscount < 100000;
+          case "100k-200k":
+            return priceAfterDiscount >= 100000 && priceAfterDiscount <= 200000;
+          case "200k-300k":
+            return priceAfterDiscount > 200000 && priceAfterDiscount <= 300000;
+          case "300k-400k":
+            return priceAfterDiscount > 300000 && priceAfterDiscount <= 400000;
+          case "over-400k":
+            return priceAfterDiscount > 400000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    return filtered;
+  };
+
   const handleZoomClick = (book) => {
     const normalizedImage =
       book && Array.isArray(book.images) && book.images.length > 0
@@ -175,6 +205,13 @@ const AllProductsPage = () => {
 
   // Cart functions
   const handleAddToCart = async (productId, quantity) => {
+    if (!user.id) {
+      showNotification(
+        "error",
+        "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng."
+      );
+      return;
+    }
     if (selectedProduct) {
       const res = await addProductToCartAPI(productId, quantity);
       console.log("Add to cart response:", res);
@@ -406,8 +443,8 @@ const AllProductsPage = () => {
                 viewMode === "list" ? "list-view" : ""
               }`}
             >
-              {listProducts.length > 0 ? (
-                listProducts.map((book) => (
+              {getFilteredProducts().length > 0 ? (
+                getFilteredProducts().map((book) => (
                   <div
                     key={book.id}
                     className={`book-card ${viewMode === "list" ? "list" : ""}`}
@@ -573,37 +610,76 @@ const AllProductsPage = () => {
                 <div className="modal-pricing">
                   {selectedProduct.discountPercentage > 0 ? (
                     <>
-                      <div className="modal-current-price" style={{ color: "#ff4d4f" }}>
+                      <div
+                        className="modal-current-price"
+                        style={{ color: "#ff4d4f" }}
+                      >
                         {formatPrice(selectedProduct.priceAfterDiscount)}
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          marginTop: "8px",
+                        }}
+                      >
                         <div className="modal-original-price">
                           {formatPrice(selectedProduct.price)}
                         </div>
-                        <div className="modal-discount" style={{
-                          backgroundColor: "#ff4d4f",
-                          color: "white",
-                          padding: "4px 12px",
-                          borderRadius: "20px",
-                          fontSize: "13px",
-                          fontWeight: "bold"
-                        }}>
+                        <div
+                          className="modal-discount"
+                          style={{
+                            backgroundColor: "#ff4d4f",
+                            color: "white",
+                            padding: "4px 12px",
+                            borderRadius: "20px",
+                            fontSize: "13px",
+                            fontWeight: "bold",
+                          }}
+                        >
                           Giảm {selectedProduct.discountPercentage}%
                         </div>
                       </div>
                     </>
                   ) : (
-                    <div className="modal-current-price" style={{ color: "#52c41a" }}>
+                    <div
+                      className="modal-current-price"
+                      style={{ color: "#52c41a" }}
+                    >
                       {formatPrice(selectedProduct.price)}
                     </div>
                   )}
+                </div>
+
+                <div className="modal-stock">
+                  <span style={{ fontWeight: "bold", color: "#555" }}>
+                    Tồn kho:{" "}
+                  </span>
+                  <span
+                    style={{
+                      color:
+                        selectedProduct.availableQuantity > 0
+                          ? "#52c41a"
+                          : "#ff4d4f",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {selectedProduct.availableQuantity > 0
+                      ? `${selectedProduct.availableQuantity} sản phẩm`
+                      : "Hết hàng"}
+                  </span>
                 </div>
 
                 <div className="modal-description">
                   <div
                     className="text-gray-800 leading-relaxed text-lg"
                     dangerouslySetInnerHTML={{
-                      __html: selectedProduct.description,
+                      __html:
+                        selectedProduct.description.length > 100
+                          ? selectedProduct.description.substring(0, 500) +
+                            "..."
+                          : selectedProduct.description,
                     }}
                   />
                 </div>

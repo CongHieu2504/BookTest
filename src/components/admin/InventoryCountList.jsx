@@ -6,7 +6,6 @@ import {
   Button,
   Space,
   Tag,
-  Select,
   Row,
   Col,
   Input,
@@ -18,47 +17,50 @@ import {
   UnorderedListOutlined,
   PlusOutlined,
   SearchOutlined,
-  ImportOutlined,
-  ExportOutlined,
   FileTextOutlined,
   FilterOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
-import ImportExportDetail from "./ImportExportDetail";
-import {
-  getAllReceiptsAPI,
-  getReceiptByIdAPI,
-  getReceiptsBetweenDatesAPI,
-} from "../../service/inventory.service";
 import dayjs from "dayjs";
 import "../../styles/AdminResponsive.css";
+import { getAllInventoryCheckAPI, getInventoryChecksBetweenDatesAPI } from "../../service/inventoryCheck.service";
+import InventoryCountDetail from "./InventoryCountDetail";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-const ImportExportList = ({ newSlip, onCreateNew }) => {
-  const [typeFilter, setTypeFilter] = useState("all");
+const InventoryCountList = ({ newSlip, onCreateNew }) => {
   const [searchText, setSearchText] = useState("");
   const [selectedSlip, setSelectedSlip] = useState(null);
-  const [stockReceipts, setStockReceipts] = useState([]);
+  const [inventoryCheckReceipts, setInventoryCheckReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState([]);
 
-  const fetchStockReceipts = async () => {
+  const fetchInventoryCheck = async () => {
     setLoading(true);
     try {
-      const res = await getAllReceiptsAPI();
-      setStockReceipts(res.data.stockReceipts);
+      const res = await getAllInventoryCheckAPI();
+      if (res && res.data && res.data.inventoryCheckReceipts) {
+        setInventoryCheckReceipts(res.data.inventoryCheckReceipts);
+      }
     } catch (error) {
-      console.error("Error fetching stock receipts:", error);
+      console.error("Error fetching inventory check receipts:", error);
+      setInventoryCheckReceipts([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStockReceipts();
+    fetchInventoryCheck();
   }, []);
+
+  // Refresh khi có phiếu mới
+  useEffect(() => {
+    if (newSlip) {
+      fetchInventoryCheck();
+    }
+  }, [newSlip]);
 
   const handleFilter = async () => {
     if (Array.isArray(dateRange) && dateRange.length === 2) {
@@ -66,100 +68,77 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
       const endDate = dayjs(dateRange[1]).format("YYYY-MM-DD");
       setLoading(true);
       try {
-        const res = await getReceiptsBetweenDatesAPI(startDate, endDate);
-        const data = res?.data?.stockReceipts;
-        setStockReceipts(Array.isArray(data) ? data : []);
+        const res = await getInventoryChecksBetweenDatesAPI(startDate, endDate);
+        const data = res?.data?.inventoryCheckReceipts;
+        setInventoryCheckReceipts(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error filtering by date:", err);
-        setStockReceipts([]); // fallback rỗng nếu lỗi
+        setInventoryCheckReceipts([]);
       } finally {
         setLoading(false);
       }
     } else {
-      // nếu chưa chọn ngày => load toàn bộ
-      fetchStockReceipts();
+      fetchInventoryCheck();
     }
   };
-
 
   const stats = {
-    total: stockReceipts.length,
-    import: stockReceipts.filter((r) => r.typeStockReceipt === "IMPORT").length,
-    export: stockReceipts.filter((r) => r.typeStockReceipt === "EXPORT").length,
+    total: inventoryCheckReceipts.length,
+    totalProducts: inventoryCheckReceipts.reduce((sum, receipt) => sum + (receipt.details?.length || 0), 0),
   };
 
-  const getSlipById = async (id) => {
-    const res = await getReceiptByIdAPI(id);
-    if(res && res.data){
-      setSelectedSlip(res.data.stockReceipt);
-    } else {
-      setSelectedSlip(null);
-    }
-  }
+  const handleViewDetail = (record) => {
+    setSelectedSlip(record);
+  };
 
   const columns = [
     {
       title: "Mã phiếu",
       dataIndex: "id",
       key: "id",
-      width: 55,
+      width: 100,
       fixed: "left",
       render: (text) => (
         <Text strong style={{ color: "#1890ff" }}>
-          {text}
+          #{text}
         </Text>
       ),
     },
     {
-      title: "Tên phiếu",
-      dataIndex: "nameStockReceipt",
-      key: "nameStockReceipt",
-      width: 200,
+      title: "Tên phiếu kiểm kho",
+      dataIndex: "nameInventoryCheckReceipt",
+      key: "nameInventoryCheckReceipt",
+      width: 250,
       ellipsis: true,
       render: (text) => text || <Text type="secondary">Chưa đặt tên</Text>,
-    },
-    {
-      title: "Loại phiếu",
-      dataIndex: "typeStockReceipt",
-      key: "typeStockReceipt",
-      width: 90,
-      align: "center",
-      render: (type) =>
-        type === "IMPORT" ? (
-          <Tag icon={<ImportOutlined />} color="success">
-            Nhập kho
-          </Tag>
-        ) : (
-          <Tag icon={<ExportOutlined />} color="warning">
-            Xuất kho
-          </Tag>
-        ),
     },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
-      width: 90,
+      width: 150,
       render: (date) => {
         const d = new Date(date);
         return (
           <Space direction="vertical" size={0}>
             <Text>{d.toLocaleDateString("vi-VN")}</Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {d.toLocaleTimeString("vi-VN")}
+              {d.toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
             </Text>
           </Space>
         );
       },
     },
     {
-      title: "Số lượng mặt hàng",
+      title: "Số sản phẩm",
       dataIndex: "details",
       key: "details",
-      width: 90,
+      width: 130,
       align: "center",
       render: (details) => (
-        <Tag color="blue">{details?.length || 0} mặt hàng</Tag>
+        <Tag color="blue" icon={<CheckCircleOutlined />}>
+          {details?.length || 0} sản phẩm
+        </Tag>
       ),
     },
     {
@@ -173,7 +152,7 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
     {
       title: "Thao tác",
       key: "action",
-      width: 110,
+      width: 120,
       fixed: "right",
       align: "center",
       render: (_, record) => (
@@ -181,7 +160,7 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
           type="primary"
           ghost
           icon={<FileTextOutlined />}
-          onClick={() => getSlipById(record.id)}
+          onClick={() => handleViewDetail(record)}
         >
           Chi tiết
         </Button>
@@ -189,31 +168,18 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
     },
   ];
 
-  // const allData = newSlip
-  //   ? [
-  //     {
-  //       key: "new",
-  //       ...newSlip,
-  //       products: newSlip.products || [],
-  //     },
-  //     ...stockReceipts,
-  //   ]
-  //   : stockReceipts;
-
-  const filteredData = stockReceipts.filter((item) => {
-    const matchType =
-      typeFilter === "all" || item.typeStockReceipt === typeFilter;
+  const filteredData = inventoryCheckReceipts.filter((item) => {
     const matchSearch =
       searchText === "" ||
       item.note?.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.nameStockReceipt?.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.nameInventoryCheckReceipt?.toLowerCase().includes(searchText.toLowerCase()) ||
       String(item.id).includes(searchText);
-    return matchType && matchSearch;
+    return matchSearch;
   });
 
   if (selectedSlip) {
     return (
-      <ImportExportDetail
+      <InventoryCountDetail
         slip={selectedSlip}
         onBack={() => setSelectedSlip(null)}
       />
@@ -225,42 +191,32 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
       <div style={{ marginBottom: 24 }}>
         <Title level={2} className="admin-title-mobile">
           <UnorderedListOutlined style={{ marginRight: 12 }} />
-          Quản lý phiếu nhập xuất kho
+          Danh sách phiếu kiểm kho
         </Title>
         <Text type="secondary" className="admin-subtitle-mobile">
-          Theo dõi và quản lý toàn bộ hoạt động nhập xuất hàng hóa
+          Quản lý và theo dõi các phiếu kiểm kho hàng
         </Text>
       </div>
 
       {/* Thống kê */}
       <Row gutter={16} style={{ marginBottom: 24 }} className="stats-row-mobile">
-        <Col xs={24} sm={8} md={8}>
+        <Col xs={24} sm={12} md={12}>
           <Card className="admin-card-responsive dashboard-stat-card">
             <Statistic
-              title="Tổng số phiếu"
+              title="Tổng số phiếu kiểm kho"
               value={stats.total}
               prefix={<FileTextOutlined />}
               valueStyle={{ color: "#1890ff" }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8} md={8}>
+        <Col xs={24} sm={12} md={12}>
           <Card className="admin-card-responsive dashboard-stat-card">
             <Statistic
-              title="Phiếu nhập kho"
-              value={stats.import}
-              prefix={<ImportOutlined />}
+              title="Tổng sản phẩm đã kiểm"
+              value={stats.totalProducts}
+              prefix={<CheckCircleOutlined />}
               valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8} md={8}>
-          <Card className="admin-card-responsive dashboard-stat-card">
-            <Statistic
-              title="Phiếu xuất kho"
-              value={stats.export}
-              prefix={<ExportOutlined />}
-              valueStyle={{ color: "#faad14" }}
             />
           </Card>
         </Col>
@@ -269,28 +225,15 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
       {/* Bộ lọc */}
       <Card className="admin-card-responsive">
         <Row gutter={[16, 16]} align="middle" style={{ marginBottom: 24 }} className="admin-filter-section">
-          <Col xs={24} sm={12} md={8} lg={6} className="full-width-mobile">
+          <Col xs={24} sm={12} md={8} lg={8} className="full-width-mobile">
             <Input
               placeholder="Tìm kiếm theo mã, tên hoặc ghi chú..."
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+              size="large"
             />
-          </Col>
-
-          <Col xs={12} sm={6} md={4} lg={3} className="full-width-mobile">
-            <Select
-              value={typeFilter}
-              onChange={setTypeFilter}
-              style={{ width: "100%" }}
-              placeholder="Loại phiếu"
-              allowClear
-            >
-              <Option value="all">Tất cả</Option>
-              <Option value="IMPORT">Nhập kho</Option>
-              <Option value="EXPORT">Xuất kho</Option>
-            </Select>
           </Col>
 
           <Col xs={24} sm={12} md={8} lg={6} className="full-width-mobile">
@@ -300,34 +243,36 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
               value={dateRange}
               onChange={setDateRange}
               format="DD/MM/YYYY"
+              size="large"
             />
           </Col>
 
-          <Col xs={24} md={6} lg={5} style={{ textAlign: "right" }}>
+          <Col xs={24} md={8} lg={10} style={{ textAlign: "right" }}>
             <Row gutter={[8, 8]} justify="end" className="admin-action-buttons">
-              <Col xs={12} md={24}>
+              <Col xs={12} md={12}>
                 <Tooltip title="Áp dụng bộ lọc">
                   <Button
                     icon={<FilterOutlined />}
                     onClick={handleFilter}
-                    style={{ height: 40, width: "100%" }}
+                    size="large"
+                    style={{ width: "100%" }}
                   >
-                    <span className="hide-mobile">Lọc</span>
+                    <span className="hide-mobile">Lọc theo ngày</span>
                     <span className="show-mobile">Lọc</span>
                   </Button>
                 </Tooltip>
               </Col>
-              <Col xs={12} md={24}>
-                <Tooltip title="Tạo phiếu mới">
+              <Col xs={12} md={12}>
+                <Tooltip title="Tạo phiếu kiểm kho mới">
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
                     size="large"
                     onClick={onCreateNew}
-                    style={{ height: 40, fontWeight: 500, width: "100%" }}
+                    style={{ fontWeight: 500, width: "100%" }}
                   >
                     <span className="hide-mobile">Tạo phiếu mới</span>
-                    <span className="show-mobile">Mới</span>
+                    <span className="show-mobile">Tạo mới</span>
                   </Button>
                 </Tooltip>
               </Col>
@@ -351,7 +296,7 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
               showTotal: (total, range) =>
                 `Hiển thị ${range[0]}-${range[1]} trong tổng số ${total} phiếu`,
             }}
-            scroll={{ x: 1110 }}
+            scroll={{ x: 1100 }}
             bordered
           />
         </div>
@@ -360,4 +305,4 @@ const ImportExportList = ({ newSlip, onCreateNew }) => {
   );
 };
 
-export default ImportExportList;
+export default InventoryCountList;
